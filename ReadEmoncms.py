@@ -1,6 +1,7 @@
 #%%
 import requests
 import datetime
+import pytz
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,44 @@ def retrieve_all(feedurl, feedId, apikey, feedParms, NQmax, Nmax):
     vals = np.append(vals, np.array(feedVals), axis=0)
     return vals
 
+#%% Function that retrieves all data from a feed by sequentially querying NQmax points at the time, set Nmax to max number of points to query, or 0 to get all
+def retrieve_range(feedurl, feedId, apikey, feedParms, NQmax, Nmax, tstart, tend):
+    print 'Retrieving:', feedId
+    Np = feedParms['npoints']
+    ti = feedParms['interval']
+    ts = feedParms['start_time']
+    print '  Begins on:', datetime.datetime.fromtimestamp(ts)
+    print '  Contains:', Np, 'points'    
+    
+    if tstart < ts:
+        print 'Specified tstart earlier than feed start time, setting to feed start'
+        tstart = ts
+    if tend > ts+Np*ti:
+        print 'Specified tend past than feed end time, setting to feed end'
+        tend = ts+Np*ti
+    
+    ts = ts+(int((tstart-ts)/ti)+1)*ti
+    Np = int((tend-tstart)/ti)
+    te = ts - ti # initial end time for query, see logic inside the while loop to understand why set like this initially
+    nq = 0 # number of queried points
+    vals = np.empty(shape=(0,2)) # empty array to hold the values
+    
+    if Nmax <= 0:
+        Nmax = Np
+    while nq < Nmax-NQmax:
+        nq = nq + NQmax
+        ts = te + ti # new start is the previous end plus one interval
+        te = te + NQmax*ti
+        print '  Querying interval:', datetime.datetime.fromtimestamp(ts), 'to:', datetime.datetime.fromtimestamp(te)
+        feedVals = requests.get(url=feedurl, params={'id':feedId, 'start':ts*1000, 'end':te*1000, 'interval':ti, 'apikey':apikey}).json()
+        vals = np.append(vals, np.array(feedVals), axis=0)
+    # capturing the remaining points
+    ts = te + ti
+    te = te + (Nmax-nq)*ti
+    print '  Querying interval:', datetime.datetime.fromtimestamp(ts), 'to:', datetime.datetime.fromtimestamp(te)
+    feedVals = requests.get(url=feedurl, params={'id':feedId, 'start':ts*1000, 'end':te*1000, 'interval':ti, 'apikey':apikey}).json()
+    vals = np.append(vals, np.array(feedVals), axis=0)
+    return vals
 
 #%% Authentication for Bebic5 home
 apikey = '8704120f75b7369408fb893efdf00f6b'
@@ -76,10 +115,19 @@ print '  Lasts:', feeds_metadata[CT2pwrId]['npoints']/(3600/feeds_metadata[CT2pw
 #%% Data retrieval packaged inside the function
 NpQueryLim = 3000 # 3000 points is the query limit
 Nmax = -1 # int(2*7*24*3600/10) # want to retrieve two weeks worth
-print feeds_names[CT1pwrId]
-pwr1 = retrieve_all(feeds_url+get_data, CT1pwrId, apikey, feeds_metadata[CT1pwrId], NpQueryLim, Nmax)
-print feeds_names[CT2pwrId]
-pwr2 = retrieve_all(feeds_url+get_data, CT2pwrId, apikey, feeds_metadata[CT2pwrId], NpQueryLim, Nmax)
+if False:
+    print feeds_names[CT1pwrId]
+    pwr1 = retrieve_all(feeds_url+get_data, CT1pwrId, apikey, feeds_metadata[CT1pwrId], NpQueryLim, Nmax)
+    print feeds_names[CT2pwrId]
+    pwr2 = retrieve_all(feeds_url+get_data, CT2pwrId, apikey, feeds_metadata[CT2pwrId], NpQueryLim, Nmax)
+
+if True:
+    tstart = int((datetime.datetime(2015, 1, 15, 0, 0, 0, 0, pytz.UTC) - datetime.datetime(1970,1,1,0,0,0,0,pytz.UTC)).total_seconds())
+    tend   = int((datetime.datetime(2016, 1, 15, 0, 0, 0, 0, pytz.UTC) - datetime.datetime(1970,1,1,0,0,0,0,pytz.UTC)).total_seconds())
+    print feeds_names[CT1pwrId]
+    pwr1 = retrieve_range(feeds_url+get_data, CT1pwrId, apikey, feeds_metadata[CT1pwrId], NpQueryLim, Nmax, tstart, tend)
+    print feeds_names[CT2pwrId]
+    pwr2 = retrieve_range(feeds_url+get_data, CT2pwrId, apikey, feeds_metadata[CT2pwrId], NpQueryLim, Nmax, tstart, tend)
 
 #%% Prep to output a plot with timestamps on x axis
 # convert epoch to matplotlib float format
@@ -99,7 +147,7 @@ if False:
     ax.plot(fds, pwr1[nstart:,1])
     ax.plot(fds, pwr2[nstart:,1])
     
-    ax.xaxis.set_major_locator(dates.DayLocator())
+    ax.xaxis.set_major_locator(dates.MonthLocator())
     ax.xaxis.set_major_formatter(hfmt)
     # ax.set_ylim(ymin=-1000,ymax=6000)
     plt.xticks(rotation='vertical')
