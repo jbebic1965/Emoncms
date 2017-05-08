@@ -166,3 +166,12 @@ h5store = pd.HDFStore('PwrData.h5')
 h5store.put('dfpwr',df3)
 h5store.close()
 
+#%% Save as hdf file
+h5store = pd.HDFStore('Pwr1Data.h5')
+h5store.put('dfpwr',df1)
+h5store.close()
+
+#%% Save as hdf file
+h5store = pd.HDFStore('Pwr2Data.h5')
+h5store.put('dfpwr',df2)
+h5store.close()
