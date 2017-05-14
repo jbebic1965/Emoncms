@@ -16,11 +16,11 @@ def retrieve_all(feedurl, feedId, apikey, feedParms, NQmax, Nmax):
     ti = feedParms['interval']
     ts = feedParms['start_time']
     print '  Begins on:', datetime.datetime.fromtimestamp(ts)
-    print '  Contains:', Np, 'points'    
+    print '  Contains:', Np, 'points'
     te = ts - ti # initial end time for query, see logic inside the while loop to understand why set like this initially
     nq = 0 # number of queried points
     vals = np.empty(shape=(0,2)) # empty array to hold the values
-    
+
     if Nmax <= 0:
         Nmax = Np
     while nq < Nmax-NQmax:
@@ -45,21 +45,21 @@ def retrieve_range(feedurl, feedId, apikey, feedParms, NQmax, Nmax, tstart, tend
     ti = feedParms['interval']
     ts = feedParms['start_time']
     print '  Begins on:', datetime.datetime.fromtimestamp(ts)
-    print '  Contains:', Np, 'points'    
-    
+    print '  Contains:', Np, 'points'
+
     if tstart < ts:
         print 'Specified tstart earlier than feed start time, setting to feed start'
         tstart = ts
     if tend > ts+Np*ti:
         print 'Specified tend past than feed end time, setting to feed end'
         tend = ts+Np*ti
-    
+
     ts = ts+(int((tstart-ts)/ti)+1)*ti
     Np = int((tend-tstart)/ti)
     te = ts - ti # initial end time for query, see logic inside the while loop to understand why set like this initially
     nq = 0 # number of queried points
     vals = np.empty(shape=(0,2)) # empty array to hold the values
-    
+
     if Nmax <= 0:
         Nmax = Np
     while nq < Nmax-NQmax:
@@ -77,10 +77,10 @@ def retrieve_range(feedurl, feedId, apikey, feedParms, NQmax, Nmax, tstart, tend
     vals = np.append(vals, np.array(feedVals), axis=0)
     return vals
 
-#%% Authentication for Bebic5 home
+#%% Read authentication for Bebic5 home
 apikey = '8704120f75b7369408fb893efdf00f6b'
 
-#%% Open energy monitor configuration
+#%% Configuring urls for Emoncms
 feeds_url = 'https://emoncms.org/feed/'
 
 get_list  = 'list.json'
@@ -98,7 +98,7 @@ for d in feeds:
     # print d['id'], ':', d['name']
     feeds_names[d['id']] = d['name']
     feeds_metadata[d['id']]=requests.get(url=feeds_url+get_meta, params={'id':d['id'],'apikey':apikey}).json()
-    
+
 #%% These are the feed numbers I want to harvest, print their specifics
 CT1pwrId = '66718'
 CT2pwrId = '66719'
@@ -146,7 +146,7 @@ if False:
     ax = fig.add_subplot(111)
     ax.plot(fds, pwr1[nstart:,1])
     ax.plot(fds, pwr2[nstart:,1])
-    
+
     ax.xaxis.set_major_locator(dates.MonthLocator())
     ax.xaxis.set_major_formatter(hfmt)
     # ax.set_ylim(ymin=-1000,ymax=6000)
